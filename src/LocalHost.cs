@@ -52,13 +52,32 @@ namespace LinkLapse {
     if(first[0]=="POST"){
      string contentType;if(origin!=Url||!headers.TryGetValue("Content-Type",out contentType)||!contentType.StartsWith("application/json",StringComparison.OrdinalIgnoreCase)){Send(stream,403,"text/plain","JSON same-origin requests only",null,null);return;}
     }
-    int count=0;string length;if(headers.TryGetValue("Content-Length",out length)&&(!int.TryParse(length,out count)||count<0||count>16384)){Send(stream,413,"text/plain","Invalid body size",null,null);return;}
+    int count=0;string length;
+    if(headers.TryGetValue("Content-Length",out length)){
+     if(!int.TryParse(length,out count)||count<0){Send(stream,413,"text/plain","Invalid body size",null,null);return;}
+     if(count>16384){
+      // Closing with unread incoming data can reset TCP before Windows delivers the 413.
+      // Discard only a small bounded upload, without accepting or dispatching its body.
+      DrainRejectedBody(client,stream,input,count,Math.Max(0,total-end));
+      Send(stream,413,"text/plain","Invalid body size",null,null);return;
+     }
+    }
     while(total-end<count){int n=stream.Read(input,total,Math.Min(input.Length-total,count-(total-end)));if(n==0)return;total+=n;}
     var request=new UiRequest{Method=first[0],Path=first[1].Split('?')[0],Body=Encoding.UTF8.GetString(input,end,count)};
     if(!requests.TryAdd(request)){Send(stream,503,"text/plain","Busy",null,null);return;}
     if(!request.Done.Wait(15000)){Send(stream,503,"text/plain","Application did not respond",null,null);return;}
     Send(stream,request.Code,request.Mime,request.Text,request.FilePath,request.DownloadName);
    }}catch(IOException){}catch(SocketException){}catch(ObjectDisposedException){}
+  }
+  static void DrainRejectedBody(TcpClient client,NetworkStream stream,byte[] buffer,int declared,int buffered){
+   if(declared>65536)return;
+   int remaining=Math.Max(0,declared-buffered);var timer=System.Diagnostics.Stopwatch.StartNew();
+   while(remaining>0){
+    int wait=1000-(int)timer.ElapsedMilliseconds;if(wait<=0)return;
+    client.ReceiveTimeout=wait;
+    try{int read=stream.Read(buffer,0,Math.Min(buffer.Length,remaining));if(read==0)return;remaining-=read;}
+    catch(IOException){return;}catch(SocketException){return;}
+   }
   }
   static bool EqualToken(string a,string b){if(a==null||a.Length!=b.Length)return false;int diff=0;for(int i=0;i<a.Length;i++)diff|=a[i]^b[i];return diff==0;}
   static void Send(NetworkStream stream,int code,string mime,string text,string path,string download){
