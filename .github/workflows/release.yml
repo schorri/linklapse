@@ -1,0 +1,39 @@
+name: Prepare release draft
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag
+        required: true
+        default: v0.1.0
+permissions:
+  contents: read
+jobs:
+  draft:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build and verify
+        shell: powershell
+        run: |
+          .\tools\Build.ps1
+          .\tests\Run.ps1
+          node tests/Diagnostics.Tests.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Assessment checks failed.' }
+          node tests/Bridge.Tests.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Bridge checks failed.' }
+          .\tools\Package.ps1
+      - name: Create release draft
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if ($env:RELEASE_TAG -ne 'v0.1.0') { throw 'Update package version and release notes before changing the tag.' }
+          gh release create $env:RELEASE_TAG dist/LinkLapse-Windows-v0.1.0.zip dist/LinkLapse-GitHub-v0.1.0.zip dist/SHA256SUMS.txt --draft --prerelease --target $env:GITHUB_SHA --title 'LinkLapse v0.1.0' --notes-file docs/releases/v0.1.0.md
+          if ($LASTEXITCODE -ne 0) { throw 'Release draft creation failed.' }
