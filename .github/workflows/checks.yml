@@ -1,0 +1,25 @@
+name: Checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build portable launcher
+        shell: powershell
+        run: .\tools\Build.ps1
+      - name: PowerShell regression checks
+        shell: powershell
+        run: .\tests\Run.ps1
+      - name: Dashboard assessment checks
+        run: node tests/Diagnostics.Tests.cjs
+      - name: Local bridge checks
+        run: node tests/Bridge.Tests.cjs
+      - name: Package
+        shell: powershell
+        run: .\tools\Package.ps1
