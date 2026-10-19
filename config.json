@@ -1,0 +1,53 @@
+{
+  "InterfaceName": "",
+  "DurationMinutes": 60,
+  "IntervalSeconds": 1,
+  "PingTimeoutMs": 800,
+  "TcpEverySeconds": 5,
+  "WebEverySeconds": 60,
+  "WebTimeoutMs": 4000,
+  "DashboardEverySeconds": 5,
+  "HighInternetLatencyMs": 150,
+  "HighGatewayLatencyMs": 30,
+  "WeakWifiPercent": 40,
+  "InternetTargets": [
+    "1.1.1.1",
+    "8.8.8.8",
+    "9.9.9.9"
+  ],
+  "TcpTargets": [
+    {
+      "Ip": "1.1.1.1",
+      "Port": 443
+    },
+    {
+      "Ip": "8.8.8.8",
+      "Port": 443
+    }
+  ],
+  "WebUrls": [
+    "https://www.microsoft.com/favicon.ico",
+    "https://www.cloudflare.com/cdn-cgi/trace"
+  ],
+  "Speed": {
+    "Enabled": false,
+    "EveryMinutes": 60,
+    "MaxMiB": 5,
+    "MaxSeconds": 15,
+    "MaxMbps": 0,
+    "Url": "https://speed.cloudflare.com/__down",
+    "ExpectedMbps": 0,
+    "SlowRatio": 0.5
+  },
+  "Language": "en",
+  "Topology": {
+    "Enabled": true,
+    "MaxHops": 12,
+    "TimeoutMs": 500,
+    "DiscoverEveryMinutes": 15,
+    "ProbeEverySeconds": 5,
+    "MaxMonitoredHops": 3,
+    "HighHopLatencyMs": 75,
+    "AccessPointAddress": ""
+  }
+}
